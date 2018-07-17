@@ -46,6 +46,7 @@ import android.text.Spanned;
 import android.text.TextUtils;
 import android.text.format.DateUtils;
 import android.text.style.TextAppearanceSpan;
+import android.util.Log;
 import android.util.TypedValue;
 import android.view.View;
 import android.view.ViewAnimationUtils;
@@ -67,6 +68,8 @@ import io.plaidapp.core.designernews.Injection;
 import io.plaidapp.core.designernews.data.stories.model.Story;
 import io.plaidapp.core.designernews.data.users.model.User;
 import io.plaidapp.core.designernews.domain.CommentsUseCase;
+import io.plaidapp.core.designernews.domain.PostCommentUseCase;
+import io.plaidapp.core.designernews.domain.PostReplyUseCase;
 import io.plaidapp.core.designernews.domain.model.Comment;
 import io.plaidapp.core.ui.transitions.GravityArcMotion;
 import io.plaidapp.core.ui.transitions.MorphTransform;
@@ -85,9 +88,6 @@ import io.plaidapp.designernews.R;
 import io.plaidapp.designernews.ui.login.LoginActivity;
 import io.plaidapp.ui.widget.PinnedOffsetView;
 import kotlin.Unit;
-import retrofit2.Call;
-import retrofit2.Callback;
-import retrofit2.Response;
 
 import java.text.NumberFormat;
 import java.util.ArrayList;
@@ -130,6 +130,8 @@ public class StoryActivity extends AppCompatActivity {
 
     private CommentsUseCase commentsUseCase;
     private StoryViewModel viewModel;
+    private PostCommentUseCase postCommentUseCase;
+    private PostReplyUseCase postReplyUseCase;
 
     private DesignerNewsPrefs designerNewsPrefs;
     private Markdown markdown;
@@ -147,6 +149,8 @@ public class StoryActivity extends AppCompatActivity {
         StoryViewModelFactory factory = InjectionKt.provideStoryViewModelFactory(storyId, this);
         viewModel = ViewModelProviders.of(this, factory).get(StoryViewModel.class);
         commentsUseCase = Injection.provideCommentsUseCase(this);
+        postCommentUseCase = Injection.providePostCommentUseCase(this);
+        postReplyUseCase = Injection.providePostReplyUseCase(this);
 
         bindResources();
 
@@ -552,7 +556,7 @@ public class StoryActivity extends AppCompatActivity {
                 if (TextUtils.isEmpty(enterComment.getText())) return;
                 enterComment.setEnabled(false);
                 postComment.setEnabled(false);
-                addComment();
+                postComment();
             } else {
                 needsLogin(postComment, 0);
             }
@@ -564,21 +568,20 @@ public class StoryActivity extends AppCompatActivity {
         return enterCommentView;
     }
 
-    private void addComment() {
-        final Call<Comment> comment = designerNewsPrefs.getApi()
-                .comment(story.getId(), enterComment.getText().toString());
-        comment.enqueue(new Callback<Comment>() {
-            @Override
-            public void onResponse(Call<Comment> call, Response<Comment> response) {
-                Comment responseComment = response.body();
-                commentAdded(responseComment);
-            }
+    private void postComment() {
+        String comment = enterComment.getText().toString();
 
-            @Override
-            public void onFailure(Call<Comment> call, Throwable t) {
-                commentAddingFailed();
-            }
-        });
+        postCommentUseCase.postStoryComment(comment, story.getId(),
+                it -> {
+                    if (it instanceof Result.Success) {
+                        Log.d("flo", "Comment added");
+//                        Comment responseComment = response.body();
+//                        commentAdded(responseComment);
+                    } else {
+                        commentAddingFailed();
+                    }
+                    return Unit.INSTANCE;
+                });
     }
 
     private void commentAddingFailed() {
@@ -902,20 +905,16 @@ public class StoryActivity extends AppCompatActivity {
         }
 
         private void replyToComment(Long commentId, String reply) {
-            final Call<Comment> replyToComment = designerNewsPrefs.getApi()
-                    .replyToComment(commentId, reply);
-            replyToComment.enqueue(new Callback<Comment>() {
-                @Override
-                public void onResponse(Call<Comment> call, Response<Comment> response) {
-
-                }
-
-                @Override
-                public void onFailure(Call<Comment> call, Throwable t) {
-                    Toast.makeText(getApplicationContext(),
-                            "Failed to post comment :(", Toast.LENGTH_SHORT).show();
-                }
-            });
+            postReplyUseCase.postReply(reply, commentId,
+                    it -> {
+                        if (it instanceof Result.Success) {
+                            Log.d("flo", "reply posted");
+                        } else {
+                            Toast.makeText(getApplicationContext(),
+                                    "Failed to post comment :(", Toast.LENGTH_SHORT).show();
+                        }
+                        return Unit.INSTANCE;
+                    });
         }
 
         private void handleCommentVotesClick(CommentReplyViewHolder holder,
