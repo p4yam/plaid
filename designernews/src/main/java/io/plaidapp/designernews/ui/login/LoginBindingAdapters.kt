@@ -14,21 +14,17 @@
  * limitations under the License.
  */
 
-package io.plaidapp.core.data
+package io.plaidapp.designernews.ui.login
 
-/**
- * A generic class that holds a value with its loading status.
- * @param <T>
- */
-sealed class Result<out T : Any> {
+import android.databinding.BindingAdapter
+import android.view.View
 
-    data class Success<out T : Any>(val data: T) : Result<T>()
-    data class Error(val exception: Exception) : Result<Nothing>()
-
-    override fun toString(): String {
-        return when (this) {
-            is Success<*> -> "Success[data=$data]"
-            is Error -> "Error[exception=$exception]"
-        }
+@BindingAdapter("visible")
+fun setViewVisibility(view: View, visible: Boolean) {
+    val visibility = if (visible) {
+        View.VISIBLE
+    } else {
+        View.GONE
     }
+    view.visibility = visibility
 }
