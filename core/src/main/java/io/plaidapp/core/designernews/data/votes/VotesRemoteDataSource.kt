@@ -30,22 +30,30 @@ class VotesRemoteDataSource(private val service: DesignerNewsService) {
     suspend fun upvoteStory(storyId: Long, userId: Long): Result<Unit> {
         val request = UpvoteStoryRequest(storyId, userId)
         // right now we just care whether the response is successful or not.
-        val response = service.upvoteStoryV2(request).await()
-        return if (response.isSuccessful) {
-            Result.Success(Unit)
-        } else {
-            Result.Error(IOException("Unable to upvote story ${response.code()} ${response.errorBody()?.string()}"))
+        try {
+            val response = service.upvoteStoryV2(request).await()
+            return if (response.isSuccessful) {
+                Result.Success(Unit)
+            } else {
+                Result.Error(IOException("Unable to upvote story ${response.code()} ${response.errorBody()?.string()}"))
+            }
+        } catch (e: Exception) {
+            return Result.Error(IOException("Unable to upvote story ${e.message}"))
         }
     }
 
     suspend fun upvoteComment(commentId: Long, userId: Long): Result<Unit> {
         val request = UpvoteCommentRequest(commentId, userId)
         // right now we just care whether the response is successful or not.
-        val response = service.upvoteComment(request).await()
-        return if (response.isSuccessful) {
-            Result.Success(Unit)
-        } else {
-            Result.Error(IOException("Unable to upvote comment ${response.code()} ${response.errorBody()?.string()}"))
+        try {
+            val response = service.upvoteComment(request).await()
+            return if (response.isSuccessful) {
+                Result.Success(Unit)
+            } else {
+                Result.Error(IOException("Unable to upvote comment ${response.code()} ${response.errorBody()?.string()}"))
+            }
+        } catch (e: Exception) {
+            return Result.Error(IOException("Unable to upvote comment ${e.message}"))
         }
     }
 }

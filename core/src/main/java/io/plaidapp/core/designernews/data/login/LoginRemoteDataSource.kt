@@ -39,16 +39,20 @@ class LoginRemoteDataSource(
     }
 
     suspend fun login(username: String, password: String): Result<User> {
-        val response = service.login(buildLoginParams(username, password)).await()
-        if (response.isSuccessful) {
-            val body = response.body()
-            if (body != null) {
-                val token = body.accessToken
-                tokenLocalDataSource.authToken = token
-                return requestUser()
+        try {
+            val response = service.login(buildLoginParams(username, password)).await()
+            if (response.isSuccessful) {
+                val body = response.body()
+                if (body != null) {
+                    val token = body.accessToken
+                    tokenLocalDataSource.authToken = token
+                    return requestUser()
+                }
             }
+            return Result.Error(IOException("Access token retrieval failed ${response.code()} ${response.message()}"))
+        } catch (e: Exception) {
+            return Result.Error(IOException("Error logging in ${e.message}"))
         }
-        return Result.Error(IOException("Access token retrieval failed ${response.code()} ${response.message()}"))
     }
 
     private suspend fun requestUser(): Result<User> {

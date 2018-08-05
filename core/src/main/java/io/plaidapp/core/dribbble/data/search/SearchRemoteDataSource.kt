@@ -18,8 +18,8 @@ package io.plaidapp.core.dribbble.data.search
 
 import io.plaidapp.core.data.Result
 import io.plaidapp.core.dribbble.data.api.model.Shot
-import io.plaidapp.core.dribbble.data.search.SearchRemoteDataSource.SortOrder.RECENT
 import io.plaidapp.core.dribbble.data.search.DribbbleSearchService.Companion.PER_PAGE_DEFAULT
+import io.plaidapp.core.dribbble.data.search.SearchRemoteDataSource.SortOrder.RECENT
 import java.io.IOException
 
 /**
@@ -33,16 +33,20 @@ class SearchRemoteDataSource(private val service: DribbbleSearchService) {
         sortOrder: SortOrder = RECENT,
         pageSize: Int = PER_PAGE_DEFAULT
     ): Result<List<Shot>> {
-        val response = service.searchDeferred(query, page, sortOrder.sort, pageSize).await()
-        if (response.isSuccessful) {
-            val body = response.body()
-            if (body != null) {
-                return Result.Success(body)
+        try {
+            val response = service.searchDeferred(query, page, sortOrder.sort, pageSize).await()
+            if (response.isSuccessful) {
+                val body = response.body()
+                if (body != null) {
+                    return Result.Success(body)
+                }
             }
+            return Result.Error(
+                IOException("Error getting Dribbble data ${response.code()} ${response.message()}")
+            )
+        } catch (e: Exception) {
+            return Result.Error(IOException("Error getting Dribbble data ${e.message}"))
         }
-        return Result.Error(
-            IOException("Error getting comments ${response.code()} ${response.message()}")
-        )
     }
 
     enum class SortOrder(val sort: String) {
@@ -51,7 +55,8 @@ class SearchRemoteDataSource(private val service: DribbbleSearchService) {
     }
 
     companion object {
-        @Volatile private var INSTANCE: SearchRemoteDataSource? = null
+        @Volatile
+        private var INSTANCE: SearchRemoteDataSource? = null
 
         fun getInstance(service: DribbbleSearchService): SearchRemoteDataSource {
             return INSTANCE ?: synchronized(this) {

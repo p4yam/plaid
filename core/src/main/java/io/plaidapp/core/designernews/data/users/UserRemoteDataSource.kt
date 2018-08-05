@@ -29,15 +29,22 @@ class UserRemoteDataSource(private val service: DesignerNewsService) {
     suspend fun getUsers(userIds: List<Long>): Result<List<User>> {
         val requestIds = userIds.joinToString(",")
 
-        val response = service.getUsers(requestIds).await()
-        if (response.isSuccessful) {
-            val body = response.body()
-            if (body != null) {
-                return Result.Success(body)
+        try {
+            val response = service.getUsers(requestIds).await()
+            if (response.isSuccessful) {
+                val body = response.body()
+                if (body != null) {
+                    return Result.Success(body)
+                }
             }
-        }
 
-        return Result.Error(IOException(
-                "Error getting users ${response.code()} ${response.message()}"))
+            return Result.Error(
+                IOException("Error getting users ${response.code()} ${response.message()}")
+            )
+        } catch (e: Exception) {
+            return Result.Error(
+                IOException("Error getting users ${e.message}")
+            )
+        }
     }
 }

@@ -31,18 +31,23 @@ class CommentsRemoteDataSource(private val service: DesignerNewsService) {
      */
     suspend fun getComments(ids: List<Long>): Result<List<CommentResponse>> {
         val requestIds = ids.joinToString(",")
-        val response = service.getComments(requestIds).await()
-        if (response.isSuccessful) {
-            val body = response.body()
-            if (body != null) {
-                return Result.Success(body)
+        try {
+            val response = service.getComments(requestIds).await()
+            if (response.isSuccessful) {
+                val body = response.body()
+                if (body != null) {
+                    return Result.Success(body)
+                }
             }
+            return Result.Error(IOException("Error getting comments ${response.code()} ${response.message()}"))
+        } catch (e: Exception) {
+            return Result.Error(IOException("Error getting comments  ${e.message}"))
         }
-        return Result.Error(IOException("Error getting comments ${response.code()} ${response.message()}"))
     }
 
     companion object {
-        @Volatile private var INSTANCE: CommentsRemoteDataSource? = null
+        @Volatile
+        private var INSTANCE: CommentsRemoteDataSource? = null
 
         fun getInstance(service: DesignerNewsService): CommentsRemoteDataSource {
             return INSTANCE ?: synchronized(this) {
